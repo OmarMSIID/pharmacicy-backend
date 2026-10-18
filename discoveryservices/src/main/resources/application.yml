@@ -1,0 +1,20 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: discovery-service
+
+eureka:
+  instance:
+    hostname: discovery-service
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Disable self-preservation for local dev / testing
+    enable-self-preservation: false
+    # Eviction timer interval (checks for dead instances every 5s instead of 60s)
+    eviction-interval-timer-in-ms: 5000

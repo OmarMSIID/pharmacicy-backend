@@ -1,0 +1,38 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: medicament-service
+          uri: lb://medicament-service
+          predicates:
+            - Path=/api/medicaments/**
+
+        - id: stock-service
+          uri: lb://stock-service
+          predicates:
+            - Path=/api/stocks/**
+
+        - id: ordonnance-service
+          uri: lb://ordonnance-service
+          predicates:
+            - Path=/api/ordonnances/**
+
+        - id: vente-service
+          uri: lb://vente-service
+          predicates:
+            - Path=/api/ventes/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    # How often the client sends heartbeats to Eureka (default is 30s)
+    lease-renewal-interval-in-seconds: 5
+    # How long Eureka waits without a heartbeat before evicting the client (default is 90s)
+    lease-expiration-duration-in-seconds: 10

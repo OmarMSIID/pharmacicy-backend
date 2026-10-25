@@ -52,6 +52,25 @@ services:
     networks:
       - pharmacy-net
 
+  medicament-service:
+    build: ./medicament-service
+    container_name: medicament-service
+    restart: always
+    depends_on:
+      pharmacy-db:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://pharmacy-db:3306/pharmacy_db
+      - SPRING_DATASOURCE_USERNAME=pharmacy_user
+      - SPRING_DATASOURCE_PASSWORD=pharmacy_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    ports:
+      - "8082:8082"
+    networks:
+      - pharmacy-net
+
 volumes:
   mysql-storage:
     driver: local

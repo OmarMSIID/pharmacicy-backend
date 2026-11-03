@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.stockservice.Client.MedicamentClient;
 import com.example.stockservice.DTO.MedicamentDTO;
+import com.example.stockservice.DTO.StockDeductRequest;
 import com.example.stockservice.DTO.StockWithMedicamentDTO;
 import com.example.stockservice.Repo.StockLotRepository;
 import com.example.stockservice.model.StockLot;
@@ -72,6 +73,14 @@ public class StockService {
                 lot.setQuantite(0);
                 repository.save(lot);
             }
+        }
+    }
+
+    // All-or-nothing: if one line cannot be deducted, the whole transaction rolls back
+    @Transactional
+    public void deductStockBatch(List<StockDeductRequest> lignes) {
+        for (StockDeductRequest ligne : lignes) {
+            deductStock(ligne.getMedicamentId(), ligne.getQuantite());
         }
     }
 

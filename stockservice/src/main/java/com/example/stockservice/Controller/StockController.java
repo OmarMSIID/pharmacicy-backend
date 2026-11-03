@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.stockservice.DTO.StockDeductBatchRequest;
 import com.example.stockservice.DTO.StockDeductRequest;
 import com.example.stockservice.DTO.StockWithMedicamentDTO;
 import com.example.stockservice.Service.StockService;
@@ -47,6 +48,16 @@ public class StockController {
     public ResponseEntity<String> deduireStock(@Valid @RequestBody StockDeductRequest request) {
         try {
             stockService.deductStock(request.getMedicamentId(), request.getQuantite());
+            return ResponseEntity.ok("Stock décrémenté avec succès.");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/deduire-multiple")
+    public ResponseEntity<String> deduireStockMultiple(@Valid @RequestBody StockDeductBatchRequest request) {
+        try {
+            stockService.deductStockBatch(request.getLignes());
             return ResponseEntity.ok("Stock décrémenté avec succès.");
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

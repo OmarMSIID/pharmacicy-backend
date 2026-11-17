@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS medicaments (
     dci VARCHAR(150),
     dosage VARCHAR(50),
     forme VARCHAR(50),
-    prix_unitaire DECIMAL(10,2) NOT NULL
+    prix_unitaire DECIMAL(10,2) NOT NULL,
+    sur_ordonnance BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS stocks_lots (
@@ -22,10 +23,17 @@ CREATE TABLE IF NOT EXISTS stocks_lots (
 
 CREATE TABLE IF NOT EXISTS ordonnances (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nom_patient VARCHAR(100) NOT NULL,
-    nom_medecin VARCHAR(100) NOT NULL,
-    date_emission DATE NOT NULL,
-    statut VARCHAR(30) DEFAULT 'EN_ATTENTE'
+    nom_prescripteur VARCHAR(100),
+    date_prescription TIMESTAMP NOT NULL,
+    statut VARCHAR(30) NOT NULL DEFAULT 'EN_ATTENTE'
+);
+
+CREATE TABLE IF NOT EXISTS ordonnance_medicaments (
+    ordonnance_id BIGINT NOT NULL,
+    medicament_id BIGINT NOT NULL,
+    PRIMARY KEY (ordonnance_id, medicament_id),
+    CONSTRAINT fk_ordonnance_medicaments_ordonnance
+        FOREIGN KEY (ordonnance_id) REFERENCES ordonnances(id)
 );
 
 CREATE TABLE IF NOT EXISTS ventes (

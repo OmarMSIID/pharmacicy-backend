@@ -31,15 +31,25 @@ public class Medicament {
     @Column(name = "prix_unitaire", nullable = false, precision = 10, scale = 2)
     private BigDecimal prixUnitaire;
 
+    @Column(name = "sur_ordonnance", nullable = false)
+    private boolean surOrdonnance;
+
     protected Medicament() {
     }
 
-    public Medicament(String nomCommercial, String dci, String dosage, String forme, BigDecimal prixUnitaire) {
+    public Medicament(
+            String nomCommercial,
+            String dci,
+            String dosage,
+            String forme,
+            BigDecimal prixUnitaire,
+            boolean surOrdonnance) {
         this.nomCommercial = nomCommercial;
         this.dci = dci;
         this.dosage = dosage;
         this.forme = forme;
         this.prixUnitaire = prixUnitaire;
+        this.surOrdonnance = surOrdonnance;
     }
 
     public Long getId() {
@@ -84,5 +94,13 @@ public class Medicament {
 
     public void setPrixUnitaire(BigDecimal prixUnitaire) {
         this.prixUnitaire = prixUnitaire;
+    }
+
+    public boolean isSurOrdonnance() {
+        return surOrdonnance;
+    }
+
+    public void setSurOrdonnance(boolean surOrdonnance) {
+        this.surOrdonnance = surOrdonnance;
     }
 }

@@ -38,7 +38,8 @@ public class MedicamentServiceImpl implements MedicamentService {
                 request.dci(),
                 request.dosage(),
                 request.forme(),
-                request.prixUnitaire());
+                request.prixUnitaire(),
+                request.surOrdonnance());
         return MedicamentResponse.from(repository.save(medicament));
     }
 
@@ -50,6 +51,7 @@ public class MedicamentServiceImpl implements MedicamentService {
         medicament.setDosage(request.dosage());
         medicament.setForme(request.forme());
         medicament.setPrixUnitaire(request.prixUnitaire());
+        medicament.setSurOrdonnance(request.surOrdonnance());
         return MedicamentResponse.from(repository.save(medicament));
     }
 

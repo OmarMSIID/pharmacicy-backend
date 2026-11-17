@@ -1,42 +1,68 @@
+package com.pharmacy.ordonnance.service;
+
+import com.pharmacy.ordonnance.client.MedicamentClient;
+import com.pharmacy.ordonnance.dto.MedicamentDTO;
+import com.pharmacy.ordonnance.dto.OrdonnanceRequest;
+import com.pharmacy.ordonnance.model.Ordonnance;
+import com.pharmacy.ordonnance.model.StatutOrdonnance;
+import com.pharmacy.ordonnance.repository.OrdonnanceRepository;
+import java.time.LocalDateTime;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 @Service
-@RequiredArgsConstructor
 public class OrdonnanceServiceImpl {
 
     private final OrdonnanceRepository repository;
     private final MedicamentClient medicamentClient;
 
+    public OrdonnanceServiceImpl(OrdonnanceRepository repository, MedicamentClient medicamentClient) {
+        this.repository = repository;
+        this.medicamentClient = medicamentClient;
+    }
+
+    @Transactional
     public Ordonnance createOrdonnance(OrdonnanceRequest request) {
         boolean necessitePrescripteur = false;
 
-        // 1. Vérifier si un des médicaments exige une ordonnance
-        for (Long medId : request.getMedicamentIds()) {
+        for (Long medId : request.medicamentIds()) {
             MedicamentDTO med = medicamentClient.getMedicamentById(medId);
-            if (med != null && med.isSurOrdonnance()) {
+            if (med != null && med.surOrdonnance()) {
                 necessitePrescripteur = true;
                 break;
             }
         }
 
-        // 2. Règle métier : Si ordonnance requise, le prescripteur est OBLIGATOIRE
-        if (necessitePrescripteur && (request.getNomPrescripteur() == null || request.getNomPrescripteur().trim().isEmpty())) {
-            throw new IllegalArgumentException("Nom du prescripteur obligatoire : au moins un médicament nécessite une ordonnance.");
+        if (necessitePrescripteur
+                && (request.nomPrescripteur() == null || request.nomPrescripteur().trim().isEmpty())) {
+            throw new IllegalArgumentException(
+                    "Nom du prescripteur obligatoire : au moins un médicament nécessite une ordonnance.");
         }
 
-        // 3. Sauvegarder
-        Ordonnance ordonnance = Ordonnance.builder()
-                .nomPrescripteur(request.getNomPrescripteur())
-                .medicamentIds(request.getMedicamentIds())
-                .datePrescription(LocalDateTime.now())
-                .statut(StatutOrdonnance.EN_ATTENTE)
-                .build();
+        Ordonnance ordonnance = new Ordonnance(
+                null,
+                request.nomPrescripteur(),
+                LocalDateTime.now(),
+                StatutOrdonnance.EN_ATTENTE,
+                request.medicamentIds());
 
         return repository.save(ordonnance);
     }
 
-    // Méthode appelée par vente-service (d'après ton document)
+    @Transactional(readOnly = true)
+    public Ordonnance findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Ordonnance introuvable : " + id));
+    }
+
+    @Transactional
     public Ordonnance marquerCommeServie(Long id) {
         Ordonnance ord = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ordonnance introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Ordonnance introuvable : " + id));
         ord.setStatut(StatutOrdonnance.SERVIE);
         return repository.save(ord);
     }

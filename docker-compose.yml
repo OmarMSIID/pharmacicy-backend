@@ -16,7 +16,7 @@ services:
       MYSQL_USER: pharmacy_user
       MYSQL_PASSWORD: pharmacy_password
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3307}:3306"
     volumes:
       - mysql-storage:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -89,6 +89,27 @@ services:
     networks:
         - pharmacy-net
 
+  ordonnance-service:
+    build: ./ordonnance-service
+    container_name: ordonnance-service
+    restart: always
+    depends_on:
+      pharmacy-db:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
+      medicament-service:
+        condition: service_started
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://pharmacy-db:3306/pharmacy_db
+      - SPRING_DATASOURCE_USERNAME=pharmacy_user
+      - SPRING_DATASOURCE_PASSWORD=pharmacy_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    ports:
+      - "8085:8085"
+    networks:
+      - pharmacy-net
+
   vente-service:
     build: ./vente-service
     container_name: vente-service
@@ -97,6 +118,8 @@ services:
       pharmacy-db:
         condition: service_healthy
       discovery-service:
+        condition: service_started
+      ordonnance-service:
         condition: service_started
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://pharmacy-db:3306/pharmacy_db

@@ -17,7 +17,9 @@ public record MedicamentResponse(
         @Schema(description = "Pharmaceutical form", example = "Tablet")
         String forme,
         @Schema(description = "Unit price", example = "4.25")
-        BigDecimal prixUnitaire) {
+        BigDecimal prixUnitaire,
+        @Schema(description = "Whether this medicament requires a prescription", example = "true")
+        boolean surOrdonnance) {
 
     public static MedicamentResponse from(Medicament medicament) {
         return new MedicamentResponse(
@@ -26,6 +28,7 @@ public record MedicamentResponse(
                 medicament.getDci(),
                 medicament.getDosage(),
                 medicament.getForme(),
-                medicament.getPrixUnitaire());
+                medicament.getPrixUnitaire(),
+                medicament.isSurOrdonnance());
     }
 }

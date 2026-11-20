@@ -18,5 +18,7 @@ public record MedicamentRequest(
         @Schema(description = "Pharmaceutical form", example = "Tablet")
         @Size(max = 50) String forme,
         @Schema(description = "Unit price; must be zero or greater", example = "4.25")
-        @NotNull @PositiveOrZero BigDecimal prixUnitaire) {
+        @NotNull @PositiveOrZero BigDecimal prixUnitaire,
+        @Schema(description = "Whether this medicament requires a prescription", example = "true")
+        boolean surOrdonnance) {
 }

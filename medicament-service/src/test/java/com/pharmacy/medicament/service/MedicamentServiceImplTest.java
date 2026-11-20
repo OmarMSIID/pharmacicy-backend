@@ -73,37 +73,39 @@ class MedicamentServiceImplTest {
     @Test
     // Vérifie que les données de la requête sont enregistrées et renvoyées dans la réponse.
     void createSavesAndReturnsTheRequestedMedicament() {
-        MedicamentRequest request = request("Paracetamol", "Paracetamol", "500 mg", "Comprimé", "4.25");
+        MedicamentRequest request = request("Paracetamol", "Paracetamol", "500 mg", "Comprimé", "4.25", true);
         when(repository.save(any(Medicament.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         MedicamentResponse response = service.create(request);
 
-        assertThat(response).isEqualTo(response("Paracetamol", "Paracetamol", "500 mg", "Comprimé", "4.25"));
+        assertThat(response).isEqualTo(response("Paracetamol", "Paracetamol", "500 mg", "Comprimé", "4.25", true));
         verify(repository).save(argThat(saved ->
                 saved.getNomCommercial().equals("Paracetamol")
                         && saved.getDci().equals("Paracetamol")
                         && saved.getDosage().equals("500 mg")
                         && saved.getForme().equals("Comprimé")
-                        && saved.getPrixUnitaire().compareTo(new BigDecimal("4.25")) == 0));
+                        && saved.getPrixUnitaire().compareTo(new BigDecimal("4.25")) == 0
+                        && saved.isSurOrdonnance()));
     }
 
     @Test
     // Vérifie que la mise à jour remplace chacun des champs du médicament existant.
     void updateChangesAndSavesAllMedicamentFields() {
         Medicament existing = medicament("Ancien nom", "Ancienne DCI", "100 mg", "Sirop", "2.00");
-        MedicamentRequest request = request("Nouveau nom", "Nouvelle DCI", "250 mg", "Comprimé", "6.75");
+        MedicamentRequest request = request("Nouveau nom", "Nouvelle DCI", "250 mg", "Comprimé", "6.75", true);
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
         when(repository.save(existing)).thenReturn(existing);
 
         MedicamentResponse response = service.update(1L, request);
 
-        assertThat(response).isEqualTo(response("Nouveau nom", "Nouvelle DCI", "250 mg", "Comprimé", "6.75"));
+        assertThat(response).isEqualTo(response("Nouveau nom", "Nouvelle DCI", "250 mg", "Comprimé", "6.75", true));
         assertThat(existing.getNomCommercial()).isEqualTo("Nouveau nom");
         assertThat(existing.getDci()).isEqualTo("Nouvelle DCI");
         assertThat(existing.getDosage()).isEqualTo("250 mg");
         assertThat(existing.getForme()).isEqualTo("Comprimé");
         assertThat(existing.getPrixUnitaire()).isEqualByComparingTo("6.75");
+        assertThat(existing.isSurOrdonnance()).isTrue();
         verify(repository).save(existing);
     }
 
@@ -146,18 +148,30 @@ class MedicamentServiceImplTest {
     // Construit une entité de test avec un prix décimal exact, sans dépendre de la base.
     private static Medicament medicament(
             String nomCommercial, String dci, String dosage, String forme, String prixUnitaire) {
-        return new Medicament(nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire));
+        return new Medicament(nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire), false);
     }
 
     // Construit le DTO d'entrée utilisé par les scénarios de création et de mise à jour.
     private static MedicamentRequest request(
             String nomCommercial, String dci, String dosage, String forme, String prixUnitaire) {
-        return new MedicamentRequest(nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire));
+        return request(nomCommercial, dci, dosage, forme, prixUnitaire, false);
+    }
+
+    private static MedicamentRequest request(
+            String nomCommercial, String dci, String dosage, String forme, String prixUnitaire, boolean surOrdonnance) {
+        return new MedicamentRequest(
+                nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire), surOrdonnance);
     }
 
     // Construit le DTO attendu dans les assertions des tests.
     private static MedicamentResponse response(
             String nomCommercial, String dci, String dosage, String forme, String prixUnitaire) {
-        return new MedicamentResponse(null, nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire));
+        return response(nomCommercial, dci, dosage, forme, prixUnitaire, false);
+    }
+
+    private static MedicamentResponse response(
+            String nomCommercial, String dci, String dosage, String forme, String prixUnitaire, boolean surOrdonnance) {
+        return new MedicamentResponse(
+                null, nomCommercial, dci, dosage, forme, new BigDecimal(prixUnitaire), surOrdonnance);
     }
 }

@@ -26,3 +26,6 @@ hs_err_pid*
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Personal documents (test reports), kept out of the repository
+docs/

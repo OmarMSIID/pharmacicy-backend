@@ -5,6 +5,7 @@ import com.pharmacy.vente.dto.VenteResponse;
 import com.pharmacy.vente.service.VenteService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +43,13 @@ public class VenteController {
     public ResponseEntity<VenteResponse> create(@Valid @RequestBody VenteRequest request) {
         VenteResponse created = service.create(request);
         return ResponseEntity.created(URI.create("/api/ventes/" + created.id())).body(created);
+    }
+
+    @GetMapping
+    @Operation(summary = "List sales", description = "Returns all sales and their billing lines, newest first.")
+    @ApiResponse(responseCode = "200", description = "Sales returned successfully")
+    public List<VenteResponse> findAll() {
+        return service.findAll();
     }
 
     @GetMapping("/{id}")

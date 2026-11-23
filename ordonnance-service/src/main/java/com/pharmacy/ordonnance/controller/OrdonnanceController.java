@@ -1,5 +1,7 @@
 package com.pharmacy.ordonnance.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,6 +35,11 @@ public class OrdonnanceController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Ordonnance>> findAll() {
+        return ResponseEntity.ok(ordonnanceService.findAll());
     }
 
     @GetMapping("/{id}")

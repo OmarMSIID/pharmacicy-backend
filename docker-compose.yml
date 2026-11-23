@@ -122,12 +122,24 @@ services:
       ordonnance-service:
         condition: service_started
     environment:
+      - TZ=Africa/Casablanca
       - SPRING_DATASOURCE_URL=jdbc:mysql://pharmacy-db:3306/pharmacy_db
       - SPRING_DATASOURCE_USERNAME=pharmacy_user
       - SPRING_DATASOURCE_PASSWORD=pharmacy_password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
     ports:
       - "8084:8084"
+    networks:
+      - pharmacy-net
+
+  frontend:
+    build: ./frontend
+    container_name: pharmacy-frontend
+    restart: always
+    depends_on:
+      - api-gateway
+    ports:
+      - "3000:80"
     networks:
       - pharmacy-net
 

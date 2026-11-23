@@ -24,7 +24,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import com.example.stockservice.Client.MedicamentClient;
 import com.example.stockservice.DTO.StockWithMedicamentDTO;
@@ -34,7 +33,6 @@ import com.example.stockservice.model.StockLot;
 
 import feign.FeignException;
 
-@SpringBootTest
 @ExtendWith(MockitoExtension.class)
 class StockserviceApplicationTests {
 

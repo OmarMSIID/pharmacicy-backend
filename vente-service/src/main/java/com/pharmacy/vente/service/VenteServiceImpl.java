@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,15 +53,14 @@ public class VenteServiceImpl implements VenteService {
     @Override
     public VenteResponse create(VenteRequest request) {
         Long ordonnanceId = request.ordonnanceId();
-        if (ordonnanceId != null) {
-            checkOrdonnanceIsPending(ordonnanceId);
-        }
+        OrdonnanceDto ordonnance = ordonnanceId != null ? getPendingOrdonnance(ordonnanceId) : null;
 
         Map<Long, Integer> quantites = mergeLignes(request.lignes());
         Map<Long, String> nomsCommerciaux = new HashMap<>();
         Vente vente = new Vente(ordonnanceId);
         quantites.forEach((medicamentId, quantite) -> {
             MedicamentDto medicament = getMedicament(medicamentId);
+            checkPrescription(medicament, ordonnance);
             checkStockIsAvailable(medicament, quantite);
             nomsCommerciaux.put(medicamentId, medicament.nomCommercial());
             vente.addLigne(new LigneVente(
@@ -92,7 +92,15 @@ public class VenteServiceImpl implements VenteService {
         return VenteResponse.from(vente, nomsCommerciaux, null);
     }
 
-    private void checkOrdonnanceIsPending(Long ordonnanceId) {
+    @Override
+    public List<VenteResponse> findAll() {
+        Map<Long, String> nomsCommerciaux = findAllNomsCommerciaux();
+        return repository.findAllByOrderByDateVenteDescIdDesc().stream()
+                .map(vente -> VenteResponse.from(vente, nomsCommerciaux, null))
+                .toList();
+    }
+
+    private OrdonnanceDto getPendingOrdonnance(Long ordonnanceId) {
         OrdonnanceDto ordonnance;
         try {
             ordonnance = ordonnanceClient.findById(ordonnanceId);
@@ -102,6 +110,21 @@ public class VenteServiceImpl implements VenteService {
         if (!STATUT_EN_ATTENTE.equals(ordonnance.statut())) {
             throw new ConflictException(
                     "Ordonnance " + ordonnanceId + " cannot be served, its status is: " + ordonnance.statut());
+        }
+        return ordonnance;
+    }
+
+    /** A prescription-only medicament can only be sold with a pending prescription that lists it. */
+    private void checkPrescription(MedicamentDto medicament, OrdonnanceDto ordonnance) {
+        if (!medicament.surOrdonnance()) {
+            return;
+        }
+        boolean prescribed = ordonnance != null
+                && ordonnance.medicamentIds() != null
+                && ordonnance.medicamentIds().contains(medicament.id());
+        if (!prescribed) {
+            throw new ConflictException("Medicament " + medicament.nomCommercial()
+                    + " requires a prescription that lists it");
         }
     }
 
@@ -149,6 +172,16 @@ public class VenteServiceImpl implements VenteService {
             log.error("Vente {} was saved but ordonnance {} could not be marked as served: {}",
                     venteId, ordonnanceId, exception.getMessage());
             return "Sale recorded, but ordonnance " + ordonnanceId + " could not be marked as served";
+        }
+    }
+
+    private Map<Long, String> findAllNomsCommerciaux() {
+        try {
+            return medicamentClient.findAll().stream()
+                    .collect(Collectors.toMap(MedicamentDto::id, MedicamentDto::nomCommercial));
+        } catch (FeignException exception) {
+            log.warn("Could not fetch medicaments: {}", exception.getMessage());
+            return Map.of();
         }
     }
 

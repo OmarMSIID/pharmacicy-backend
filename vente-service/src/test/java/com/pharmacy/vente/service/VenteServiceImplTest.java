@@ -48,8 +48,8 @@ class VenteServiceImplTest {
     void setUp() {
         when(transactionManager.getTransaction(any())).thenReturn(transaction);
         when(repository.saveAndFlush(any(Vente.class))).thenAnswer(call -> call.getArgument(0));
-        when(medicamentClient.findById(1L)).thenReturn(new MedicamentDto(1L, "Paracetamol", new BigDecimal("4.25")));
-        when(medicamentClient.findById(2L)).thenReturn(new MedicamentDto(2L, "Ibuprofene", new BigDecimal("10.00")));
+        when(medicamentClient.findById(1L)).thenReturn(new MedicamentDto(1L, "Paracetamol", new BigDecimal("4.25"), false));
+        when(medicamentClient.findById(2L)).thenReturn(new MedicamentDto(2L, "Ibuprofene", new BigDecimal("10.00"), false));
         when(stockClient.getAvailableStock(any())).thenReturn(100);
         service = new VenteServiceImpl(repository, medicamentClient, stockClient, ordonnanceClient,
                 new TransactionTemplate(transactionManager));
@@ -110,7 +110,7 @@ class VenteServiceImplTest {
         FeignException.BadRequest refused = mock(FeignException.BadRequest.class);
         when(refused.contentUTF8()).thenReturn("Quantité insuffisante");
         doThrow(refused).when(stockClient).deductStock(any());
-        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE"));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE", List.of(1L)));
 
         assertThatThrownBy(() -> service.create(request(5L, ligne(1L, 1))))
                 .isInstanceOf(ConflictException.class)
@@ -133,7 +133,7 @@ class VenteServiceImplTest {
 
     @Test
     void createServesPendingOrdonnance() {
-        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE"));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE", List.of(1L)));
 
         VenteResponse response = service.create(request(5L, ligne(1L, 1)));
 
@@ -144,7 +144,7 @@ class VenteServiceImplTest {
 
     @Test
     void createRejectsOrdonnanceThatWasAlreadyServed() {
-        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "SERVIE"));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "SERVIE", List.of(1L)));
 
         assertThatThrownBy(() -> service.create(request(5L, ligne(1L, 1))))
                 .isInstanceOf(ConflictException.class);
@@ -174,13 +174,48 @@ class VenteServiceImplTest {
 
     @Test
     void createKeepsTheSaleAndWarnsWhenServingOrdonnanceFails() {
-        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE"));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE", List.of(1L)));
         doThrow(mock(FeignException.ServiceUnavailable.class)).when(ordonnanceClient).serve(5L);
 
         VenteResponse response = service.create(request(5L, ligne(1L, 1)));
 
         assertThat(response.avertissement()).contains("ordonnance 5");
         verify(transactionManager).commit(transaction);
+    }
+
+    @Test
+    void createRejectsPrescriptionOnlyMedicamentWithoutOrdonnance() {
+        when(medicamentClient.findById(3L)).thenReturn(new MedicamentDto(3L, "Amoxil", new BigDecimal("54.00"), true));
+
+        assertThatThrownBy(() -> service.create(request(null, ligne(1L, 1), ligne(3L, 1))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Amoxil");
+
+        verify(repository, never()).saveAndFlush(any());
+        verify(stockClient, never()).deductStock(any());
+    }
+
+    @Test
+    void createRejectsPrescriptionOnlyMedicamentNotListedOnTheOrdonnance() {
+        when(medicamentClient.findById(3L)).thenReturn(new MedicamentDto(3L, "Amoxil", new BigDecimal("54.00"), true));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE", List.of(1L)));
+
+        assertThatThrownBy(() -> service.create(request(5L, ligne(3L, 1))))
+                .isInstanceOf(ConflictException.class);
+
+        verify(repository, never()).saveAndFlush(any());
+        verify(ordonnanceClient, never()).serve(any());
+    }
+
+    @Test
+    void createSellsPrescriptionOnlyMedicamentListedOnTheOrdonnance() {
+        when(medicamentClient.findById(3L)).thenReturn(new MedicamentDto(3L, "Amoxil", new BigDecimal("54.00"), true));
+        when(ordonnanceClient.findById(5L)).thenReturn(new OrdonnanceDto(5L, "EN_ATTENTE", List.of(3L)));
+
+        VenteResponse response = service.create(request(5L, ligne(3L, 1)));
+
+        assertThat(response.total()).isEqualByComparingTo("54.00");
+        verify(ordonnanceClient).serve(5L);
     }
 
     @Test
@@ -196,6 +231,36 @@ class VenteServiceImplTest {
         assertThat(response.total()).isEqualByComparingTo("10.50");
         assertThat(response.lignes().get(0).nomCommercial()).isEqualTo("Paracetamol");
         assertThat(response.lignes().get(1).nomCommercial()).isNull();
+    }
+
+    @Test
+    void findAllFillsNamesFromOneCatalogCall() {
+        Vente first = new Vente(null);
+        first.addLigne(new LigneVente(1L, 2, new BigDecimal("8.50")));
+        Vente second = new Vente(null);
+        second.addLigne(new LigneVente(1L, 1, new BigDecimal("4.25")));
+        when(repository.findAllByOrderByDateVenteDescIdDesc()).thenReturn(List.of(first, second));
+        when(medicamentClient.findAll()).thenReturn(List.of(
+                new MedicamentDto(1L, "Paracetamol", new BigDecimal("4.25"), false)));
+
+        List<VenteResponse> ventes = service.findAll();
+
+        assertThat(ventes).hasSize(2);
+        assertThat(ventes.get(1).lignes().get(0).nomCommercial()).isEqualTo("Paracetamol");
+        verify(medicamentClient, never()).findById(any());
+    }
+
+    @Test
+    void findAllLeavesNamesEmptyWhenMedicamentServiceIsDown() {
+        Vente vente = new Vente(null);
+        vente.addLigne(new LigneVente(1L, 2, new BigDecimal("8.50")));
+        when(repository.findAllByOrderByDateVenteDescIdDesc()).thenReturn(List.of(vente));
+        when(medicamentClient.findAll()).thenThrow(mock(FeignException.ServiceUnavailable.class));
+
+        List<VenteResponse> ventes = service.findAll();
+
+        assertThat(ventes.get(0).lignes().get(0).nomCommercial()).isNull();
+        assertThat(ventes.get(0).total()).isEqualByComparingTo("8.50");
     }
 
     @Test

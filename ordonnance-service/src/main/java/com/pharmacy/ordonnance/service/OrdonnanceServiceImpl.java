@@ -7,6 +7,7 @@ import com.pharmacy.ordonnance.model.Ordonnance;
 import com.pharmacy.ordonnance.model.StatutOrdonnance;
 import com.pharmacy.ordonnance.repository.OrdonnanceRepository;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,11 @@ public class OrdonnanceServiceImpl {
                 request.medicamentIds());
 
         return repository.save(ordonnance);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Ordonnance> findAll() {
+        return repository.findAllByOrderByDatePrescriptionDescIdDesc();
     }
 
     @Transactional(readOnly = true)

@@ -78,6 +78,16 @@ class VenteControllerTest {
     }
 
     @Test
+    void findAllReturnsSales() throws Exception {
+        when(service.findAll()).thenReturn(List.of(sampleResponse()));
+
+        mockMvc.perform(get("/api/ventes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(7))
+                .andExpect(jsonPath("$[0].lignes[0].nomCommercial").value("Paracetamol"));
+    }
+
+    @Test
     void findByIdReturnsSale() throws Exception {
         when(service.findById(7L)).thenReturn(sampleResponse());
 

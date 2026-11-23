@@ -1,4 +1,6 @@
 package com.pharmacy.vente.dto;
 
-public record OrdonnanceDto(Long id, String statut) {
+import java.util.List;
+
+public record OrdonnanceDto(Long id, String statut, List<Long> medicamentIds) {
 }

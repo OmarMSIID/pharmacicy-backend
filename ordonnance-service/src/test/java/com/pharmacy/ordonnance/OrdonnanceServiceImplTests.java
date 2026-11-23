@@ -107,6 +107,15 @@ class OrdonnanceServiceImplTest {
     }
 
     @Test
+    void findAllReturnsTheNewestOrdonnancesFirst() {
+        Ordonnance recente = new Ordonnance(2L, null, null, StatutOrdonnance.EN_ATTENTE, List.of());
+        Ordonnance ancienne = new Ordonnance(1L, null, null, StatutOrdonnance.SERVIE, List.of());
+        when(repository.findAllByOrderByDatePrescriptionDescIdDesc()).thenReturn(List.of(recente, ancienne));
+
+        assertEquals(List.of(recente, ancienne), ordonnanceService.findAll());
+    }
+
+    @Test
     void findByIdReturnsNotFoundWhenOrdonnanceDoesNotExist() {
         when(repository.findById(10L)).thenReturn(Optional.empty());
 

@@ -25,7 +25,8 @@ import org.junit.jupiter.api.Test;
  */
 class MedicamentServiceImplTest {
 
-    // Le repository simulé permet de contrôler les réponses de la couche de persistance. (3zma Simulation dyal Database without actually connecting to it)
+    // Le repository simulé permet de contrôler les réponses de la couche de persistance.
+    //  (3zma Simulation dyal Database without actually connecting to it)
     private final MedicamentRepository repository = mock(MedicamentRepository.class);
     private MedicamentServiceImpl service;
 
